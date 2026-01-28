@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ZYNQO - Trending Products</title>
+  <style>
+    /* Basic Reset */
+    * { margin: 0; padding: 0; box-sizing: border-box; font-family: Arial, sans-serif; }
+    
+    body {
+      background: #0a0a0a;
+      color: #fff;
+      line-height: 1.6;
+      display: flex;
+      flex-direction: column;
+      min-height: 100vh;
+    }
+
+    header {
+      text-align: center;
+      padding: 50px 20px 20px 20px;
+      background: linear-gradient(90deg, #1c1c1c, #121212);
+    }
+
+    header h1 {
+      font-size: 3rem;
+      color: #00bfff;
+      margin-bottom: 10px;
+    }
+
+    header p {
+      font-size: 1.2rem;
+      color: #aaa;
+    }
+
+    main {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 40px 20px;
+      gap: 20px;
+    }
+
+    .product-card {
+      background: #1c1c1c;
+      padding: 20px;
+      border-radius: 15px;
+      text-align: center;
+      width: 90%;
+      max-width: 300px;
+      transition: transform 0.3s;
+    }
+
+    .product-card:hover {
+      transform: scale(1.05);
+    }
+
+    .product-card img {
+      width: 100%;
+      border-radius: 10px;
+      margin-bottom: 15px;
+    }
+
+    .product-card h2 {
+      font-size: 1.5rem;
+      color: #00bfff;
+      margin-bottom: 10px;
+    }
+
+    .product-card p {
+      font-size: 1rem;
+      color: #ccc;
+      margin-bottom: 15px;
+    }
+
+    .product-card a {
+      text-decoration: none;
+      background: #00bfff;
+      color: #fff;
+      padding: 10px 20px;
+      border-radius: 8px;
+      transition: background 0.3s;
+    }
+
+    .product-card a:hover {
+      background: #0095cc;
+    }
+
+    footer {
+      text-align: center;
+      padding: 20px;
+      background: #121212;
+      font-size: 0.9rem;
+      color: #555;
+    }
+  </style>
+</head>
+<body>
+
+  <header>
+    <h1>ZYNQO</h1>
+    <p>Trending products delivered fast 🚀</p>
+  </header>
+
+  <main>
+    <div class="product-card">
+      <img src="https://via.placeholder.com/300x300.png?text=Product+1" alt="Product 1">
+      <h2>Hot Product 1</h2>
+      <p>Get this trending product before it sells out!</p>
+      <a href="#">Buy Now</a>
+    </div>
+
+    <div class="product-card">
+      <img src="https://via.placeholder.com/300x300.png?text=Product+2" alt="Product 2">
+      <h2>Hot Product 2</h2>
+      <p>Limited stock! Grab yours today.</p>
+      <a href="#">Buy Now</a>
+    </div>
+  </main>
+
+  <footer>
+    &copy; 2026 ZYNQO. All rights reserved.
+  </footer>
+
+</body>
+</html>
