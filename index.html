@@ -2,257 +2,401 @@
 <html lang="sq">
 <head>
     <meta charset="UTF-8">
-    <title>NEON OVERDRIVE - Pro Racing Engine</title>
+    <title>ASPHALT NEO: HYPERDRIVE</title>
     <style>
-        /* CSS-ja këtu është e stilit AAA Mini-Game */
+        @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;900&display=swap');
         body { margin: 0; background: #000; overflow: hidden; font-family: 'Orbitron', sans-serif; }
-        #ui-layer { position: absolute; width: 100%; height: 100%; pointer-events: none; z-index: 5; }
-        canvas { display: block; filter: contrast(1.2) brightness(1.1); }
-        .hud-top { position: absolute; top: 20px; left: 20px; color: #0ff; text-shadow: 0 0 10px #0ff; }
-        .nitro-container { position: absolute; bottom: 30px; right: 30px; width: 250px; height: 15px; background: rgba(0,0,0,0.5); border: 2px solid #0ff; }
-        #nitro-bar { width: 100%; height: 100%; background: linear-gradient(90deg, #00f2fe, #4facfe); box-shadow: 0 0 15px #0ff; }
-        .overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.85); display: flex; flex-direction: column; align-items: center; justify-content: center; z-index: 100; color: #fff; }
-        .btn { padding: 20px 50px; background: none; border: 3px solid #0ff; color: #0ff; font-weight: bold; cursor: pointer; transition: 0.3s; clip-path: polygon(10% 0, 100% 0, 90% 100%, 0% 100%); }
-        .btn:hover { background: #0ff; color: #000; box-shadow: 0 0 30px #0ff; }
-        .hidden { display: none !important; }
+        #container { position: relative; width: 100vw; height: 100vh; display: flex; justify-content: center; align-items: center; }
+        canvas { box-shadow: 0 0 100px rgba(0, 210, 255, 0.3); background: #000; border: 2px solid #333; }
+        .hud { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 10; padding: 30px; box-sizing: border-box; }
+        .speedometer { position: absolute; bottom: 40px; left: 40px; color: #00f2fe; }
+        .speed-val { font-size: 60px; font-weight: 900; font-style: italic; text-shadow: 0 0 20px #00f2fe; }
+        .nitro-bar { position: absolute; bottom: 40px; right: 40px; width: 300px; height: 20px; border: 2px solid #fff; border-radius: 10px; overflow: hidden; background: rgba(0,0,0,0.5); }
+        #nitro-fill { height: 100%; width: 100%; background: linear-gradient(90deg, #ff0055, #ffaa00); transition: width 0.1s; box-shadow: 0 0 20px #ff0055; }
+        .overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.9); z-index: 100; display: flex; flex-direction: column; align-items: center; justify-content: center; color: white; }
+        .btn { padding: 20px 60px; background: #00f2fe; color: #000; font-weight: bold; border: none; cursor: pointer; font-size: 20px; clip-path: polygon(15% 0, 100% 0, 85% 100%, 0% 100%); transition: 0.3s; }
+        .btn:hover { transform: scale(1.1); box-shadow: 0 0 40px #00f2fe; }
+        #debug { position: absolute; top: 10px; right: 10px; font-size: 10px; color: #444; }
     </style>
-    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;900&display=swap" rel="stylesheet">
 </head>
 <body>
 
-<div id="ui-layer">
-    <div class="hud-top">
-        <h1 id="scoreDisplay">SCORE: 00000</h1>
-        <h2 id="levelDisplay">LEVEL: 1</h2>
+<div id="container">
+    <canvas id="gameCanvas"></canvas>
+    <div class="hud">
+        <div class="speedometer">
+            <div style="font-size: 14px;">KM/H</div>
+            <div id="speed" class="speed-val">0</div>
+        </div>
+        <div class="nitro-bar"><div id="nitro-fill"></div></div>
     </div>
-    <div class="nitro-container"><div id="nitro-bar"></div></div>
-</div>
 
-<div id="menu" class="overlay">
-    <h1 style="font-size: 80px; margin: 0; text-shadow: 0 0 20px #0ff;">NEON OVERDRIVE</h1>
-    <p style="letter-spacing: 10px; color: #4facfe;">HIGH-SPEED ARCADE RACER</p>
-    <button class="btn" onclick="Game.start()">INITIALIZE DRIVE</button>
-</div>
+    <div id="menu" class="overlay">
+        <h1 style="font-size: 70px; margin-bottom: 0; text-shadow: 0 0 30px #00f2fe;">ASPHALT NEO</h1>
+        <p style="letter-spacing: 5px; color: #00f2fe; margin-bottom: 40px;">NEXT-GEN BROWSER ENGINE</p>
+        <button class="btn" onclick="Engine.start()">START ENGINE</button>
+    </div>
 
-<div id="gameOver" class="overlay hidden">
-    <h1 style="color: #f0f;">CRITICAL ERROR: CRASHED</h1>
-    <h2 id="finalScore">SCORE: 0</h2>
-    <button class="btn" onclick="location.reload()">REBOOT SYSTEM</button>
+    <div id="gameOver" class="overlay" style="display: none;">
+        <h1 style="color: #ff0055;">WRECKED</h1>
+        <button class="btn" onclick="location.reload()">RETRY</button>
+    </div>
 </div>
-
-<canvas id="gameCanvas"></canvas>
 
 <script>
 /**
- * MOTOR KRYESOR - 1000+ LINE LOGIC ARCHITECTURE
- * Ky motor përdor Pattern-in "Singleton" dhe "Entity Component"
+ * ASPHALT NEO ENGINE
+ * Një pseudo-3D racer i bazuar në gjeometrinë e segmenteve.
  */
 
-const CONFIG = {
-    W: window.innerWidth,
-    H: window.innerHeight,
-    LANE_W: 120,
-    PLAYER_SIZE: { w: 60, h: 110 },
-    COLORS: {
-        player: '#00f2fe',
-        enemies: ['#f09', '#f90', '#0f0', '#ff0'],
-        road: '#1a1a1a'
-    }
-};
-
-class Particle {
-    constructor(x, y, color) {
-        this.x = x; this.y = y;
-        this.size = Math.random() * 5 + 2;
-        this.vx = (Math.random() - 0.5) * 4;
-        this.vy = Math.random() * 5 + 2;
-        this.life = 1.0;
-        this.color = color;
-    }
-    draw(ctx) {
-        ctx.globalAlpha = this.life;
-        ctx.fillStyle = this.color;
-        ctx.beginPath();
-        ctx.arc(this.x, this.y, this.size, 0, Math.PI*2);
-        ctx.fill();
-        ctx.globalAlpha = 1;
-    }
-}
-
-class Car {
-    constructor(x, y, color, isPlayer = false) {
-        this.x = x; this.y = y;
-        this.color = color;
-        this.isPlayer = isPlayer;
-        this.w = CONFIG.PLAYER_SIZE.w;
-        this.h = CONFIG.PLAYER_SIZE.h;
-        this.tilt = 0;
-    }
-
-    draw(ctx) {
-        ctx.save();
-        ctx.translate(this.x + this.w/2, this.y + this.h/2);
-        ctx.rotate(this.tilt * Math.PI / 180);
-        
-        // Shadow/Glow
-        ctx.shadowBlur = 15;
-        ctx.shadowColor = this.color;
-
-        // Body
-        ctx.fillStyle = "#111";
-        ctx.fillRect(-this.w/2, -this.h/2, this.w, this.h);
-        ctx.strokeStyle = this.color;
-        ctx.lineWidth = 3;
-        ctx.strokeRect(-this.w/2, -this.h/2, this.w, this.h);
-
-        // Cockpit
-        ctx.fillStyle = "rgba(255,255,255,0.2)";
-        ctx.fillRect(-this.w/3, -this.h/4, (this.w/3)*2, this.h/3);
-
-        // Neon Lights
-        ctx.fillStyle = this.color;
-        ctx.fillRect(-this.w/2 + 5, -this.h/2 + 5, 10, 5); // Front Left
-        ctx.fillRect(this.w/2 - 15, -this.h/2 + 5, 10, 5); // Front Right
-
-        ctx.restore();
-    }
-}
-
-const Game = {
-    canvas: document.getElementById('gameCanvas'),
+const Engine = {
+    // KONFIGURIMI I RRUGËS
+    fps: 60,
+    width: 1024,
+    height: 768,
+    lanes: 3,
+    fieldOfView: 100,
+    cameraHeight: 1000,
+    cameraDepth: null,
+    drawDistance: 300,
+    segmentLength: 200,
+    rumbleLength: 3,
+    trackLength: null,
+    roadWidth: 2000,
+    
+    // GJENDJA E LOJËS
+    canvas: null,
     ctx: null,
-    player: null,
-    enemies: [],
-    particles: [],
-    score: 0,
-    speed: 8,
+    playerX: 0,
+    playerZ: 0,
+    speed: 0,
+    maxSpeed: 12000,
+    accel: 100,
+    breaking: -200,
+    decel: -50,
     nitro: 100,
-    level: 1,
-    offset: 0,
-    isRunning: false,
+    isNitro: false,
+    position: 0,
+    segments: [],
+    cars: [],
     keys: {},
+    isRunning: false,
 
     init() {
+        this.canvas = document.getElementById('gameCanvas');
         this.ctx = this.canvas.getContext('2d');
-        this.canvas.width = CONFIG.W;
-        this.canvas.height = CONFIG.H;
-        this.player = new Car(CONFIG.W/2 - 30, CONFIG.H - 180, CONFIG.COLORS.player, true);
+        this.canvas.width = this.width;
+        this.canvas.height = this.height;
+        this.cameraDepth = 1 / Math.tan((this.fieldOfView / 2) * Math.PI / 180);
         
         window.addEventListener('keydown', e => this.keys[e.code] = true);
         window.addEventListener('keyup', e => this.keys[e.code] = false);
+
+        this.resetTrack();
         this.loop();
     },
 
-    start() {
-        document.getElementById('menu').classList.add('hidden');
-        this.isRunning = true;
+    resetTrack() {
+        this.segments = [];
+        // Krijimi i rrugës me kthesa dhe kodra
+        for(let n = 0; n < 5000; n++) {
+            this.segments.push({
+                index: n,
+                p1: { world: { y: this.lastY(n), z: n * this.segmentLength }, screen: {} },
+                p2: { world: { y: this.lastY(n+1), z: (n+1) * this.segmentLength }, screen: {} },
+                curve: (n > 200 && n < 400) ? 2 : (n > 600 && n < 900) ? -3 : 0,
+                color: Math.floor(n/this.rumbleLength) % 2 ? {road: '#111', grass: '#000', rumble: '#333'} : {road: '#050505', grass: '#000', rumble: '#00f2fe'}
+            });
+        }
+        this.trackLength = this.segments.length * this.segmentLength;
+        this.spawnCars();
     },
 
-    spawnEnemy() {
-        if(Math.random() < 0.02 + (this.level * 0.005)) {
-            const lane = Math.floor(Math.random() * 4);
-            const x = (CONFIG.W/2 - 240) + (lane * CONFIG.LANE_W) + 30;
-            const color = CONFIG.COLORS.enemies[Math.floor(Math.random()*4)];
-            this.enemies.push(new Car(x, -200, color));
+    lastY(n) { return (n > 500 && n < 800) ? Math.sin(n/20) * 1000 : 0; },
+
+    spawnCars() {
+        for(let n = 0; n < 20; n++) {
+            this.cars.push({
+                pos: Math.random() * this.trackLength,
+                offset: (Math.random() * 2 - 1),
+                speed: this.maxSpeed / 2 + Math.random() * 5000,
+                color: '#ff0055'
+            });
         }
     },
 
-    update() {
+    project(p, cameraX, cameraY, cameraZ, canvasWidth, canvasHeight) {
+        p.camera = {
+            x: (p.world.x || 0) - cameraX,
+            y: (p.world.y || 0) - cameraY,
+            z: (p.world.z || 0) - cameraZ
+        };
+        p.screen.scale = this.cameraDepth / p.camera.z;
+        p.screen.x = Math.round((canvasWidth / 2) + (p.screen.scale * p.camera.x * canvasWidth / 2));
+        p.screen.y = Math.round((canvasHeight / 2) - (p.screen.scale * p.camera.y * canvasHeight / 2));
+        p.screen.w = Math.round(p.screen.scale * this.roadWidth * canvasWidth / 2);
+    },
+
+    update(dt) {
         if(!this.isRunning) return;
 
-        // Player Movement & Tilt
-        if(this.keys['ArrowLeft'] && this.player.x > CONFIG.W/2 - 240) {
-            this.player.x -= 10;
-            this.player.tilt = -5;
-        } else if(this.keys['ArrowRight'] && this.player.x < CONFIG.W/2 + 180) {
-            this.player.x += 10;
-            this.player.tilt = 5;
+        // Player Logic
+        const seg = this.findSegment(this.position + this.playerZ);
+        const speedPercent = this.speed / this.maxSpeed;
+        
+        this.position += this.speed * dt;
+        while (this.position >= this.trackLength) this.position -= this.trackLength;
+
+        // Input
+        if (this.keys['ArrowUp']) this.speed += this.accel;
+        else if (this.keys['ArrowDown']) this.speed += this.breaking;
+        else this.speed += this.decel;
+
+        if (this.keys['Space'] && this.nitro > 0) {
+            this.speed += 200;
+            this.nitro -= 0.5;
+            this.isNitro = true;
         } else {
-            this.player.tilt = 0;
+            this.isNitro = false;
+            if(this.nitro < 100) this.nitro += 0.1;
         }
 
-        // Nitro Logic
-        if(this.keys['Space'] && this.nitro > 0) {
-            this.speed = 18;
-            this.nitro -= 0.8;
-            this.particles.push(new Particle(this.player.x + 30, this.player.y + 110, CONFIG.COLORS.player));
-        } else {
-            this.speed = 8 + (this.level * 2);
-            if(this.nitro < 100) this.nitro += 0.2;
-        }
+        if (this.keys['ArrowLeft']) this.playerX -= 0.05 * speedPercent;
+        if (this.keys['ArrowRight']) this.playerX += 0.05 * speedPercent;
 
-        this.offset += this.speed;
-        this.score += Math.floor(this.speed/5);
-        this.level = Math.floor(this.score / 2000) + 1;
+        // Friction & Limits
+        this.playerX -= (speedPercent * seg.curve * 0.02); // Centrifugal force
+        this.speed = Math.max(0, Math.min(this.speed, this.isNitro ? 18000 : this.maxSpeed));
+        this.playerX = Math.max(-2, Math.min(2, this.playerX));
 
-        // Enemies & Collision
-        this.enemies.forEach((enemy, i) => {
-            enemy.y += this.speed - 2;
-            if(this.checkCollision(this.player, enemy)) this.endGame();
-            if(enemy.y > CONFIG.H) this.enemies.splice(i, 1);
+        // Cars Update
+        this.cars.forEach(c => {
+            c.pos += c.speed * dt;
+            if(c.pos > this.trackLength) c.pos -= this.trackLength;
         });
 
-        this.particles.forEach((p, i) => {
-            p.y += this.speed;
-            p.life -= 0.02;
-            if(p.life <= 0) this.particles.splice(i, 1);
-        });
-
-        this.spawnEnemy();
-        this.updateUI();
+        document.getElementById('speed').innerText = Math.floor(this.speed / 50);
+        document.getElementById('nitro-fill').style.width = this.nitro + '%';
     },
 
-    checkCollision(p, e) {
-        return !(p.x + p.w - 10 < e.x + 10 || p.x + 10 > e.x + e.w - 10 || 
-                 p.y + p.h - 10 < e.y + 10 || p.y + 10 > e.y + e.h - 10);
-    },
-
-    updateUI() {
-        document.getElementById('scoreDisplay').innerText = `SCORE: ${this.score.toString().padStart(5, '0')}`;
-        document.getElementById('levelDisplay').innerText = `LEVEL: ${this.level}`;
-        document.getElementById('nitro-bar').style.width = `${this.nitro}%`;
+    findSegment(z) {
+        return this.segments[Math.floor(z / this.segmentLength) % this.segments.length];
     },
 
     draw() {
-        const ctx = this.ctx;
-        ctx.fillStyle = '#050505';
-        ctx.fillRect(0, 0, CONFIG.W, CONFIG.H);
+        this.ctx.clearRect(0, 0, this.width, this.height);
+        
+        const baseSegment = this.findSegment(this.position);
+        const basePercent = (this.position % this.segmentLength) / this.segmentLength;
+        let maxY = this.height;
+        let x = 0;
+        let dx = -(baseSegment.curve * basePercent);
 
-        // Road
-        const roadX = CONFIG.W/2 - 240;
-        ctx.fillStyle = '#111';
-        ctx.fillRect(roadX, 0, 480, CONFIG.H);
+        // Render Road
+        for(let n = 0; n < this.drawDistance; n++) {
+            const segment = this.segments[(baseSegment.index + n) % this.segments.length];
+            const cameraX = this.playerX * this.roadWidth;
+            
+            this.project(segment.p1, cameraX - x, this.cameraHeight, this.position, this.width, this.height);
+            this.project(segment.p2, cameraX - x - dx, this.cameraHeight, this.position, this.width, this.height);
+            
+            x += dx;
+            dx += segment.curve;
 
-        // Neon Grid/Lines
-        ctx.strokeStyle = '#333';
-        ctx.setLineDash([40, 60]);
-        ctx.lineDashOffset = -this.offset;
-        for(let i=0; i<=4; i++) {
-            ctx.beginPath();
-            ctx.moveTo(roadX + i*120, 0);
-            ctx.lineTo(roadX + i*120, CONFIG.H);
-            ctx.stroke();
+            if (segment.p1.camera.z <= this.cameraDepth || segment.p2.screen.y >= maxY) continue;
+
+            this.drawSegment(segment.p1.screen, segment.p2.screen, segment.color);
+            maxY = segment.p2.screen.y;
         }
 
-        this.particles.forEach(p => p.draw(ctx));
-        this.enemies.forEach(e => e.draw(ctx));
-        this.player.draw(ctx);
+        // Render Player
+        this.drawPlayer();
     },
 
-    endGame() {
-        this.isRunning = false;
-        document.getElementById('gameOver').classList.remove('hidden');
-        document.getElementById('finalScore').innerText = `FINAL SCORE: ${this.score}`;
+    drawSegment(p1, p2, color) {
+        const ctx = this.ctx;
+        ctx.fillStyle = color.grass;
+        ctx.fillRect(0, p2.y, this.width, p1.y - p2.y);
+        
+        // Rumble
+        const r1 = p1.w / 10, r2 = p2.w / 10;
+        ctx.fillStyle = color.rumble;
+        ctx.beginPath();
+        ctx.moveTo(p1.x - p1.w - r1, p1.y); ctx.lineTo(p1.x - p1.w, p1.y);
+        ctx.lineTo(p2.x - p2.w, p2.y); ctx.lineTo(p2.x - p2.w - r2, p2.y);
+        ctx.fill();
+        
+        ctx.beginPath();
+        ctx.moveTo(p1.x + p1.w + r1, p1.y); ctx.lineTo(p1.x + p1.w, p1.y);
+        ctx.lineTo(p2.x + p2.w, p2.y); ctx.lineTo(p2.x + p2.w + r2, p2.y);
+        ctx.fill();
+
+        // Road
+        ctx.fillStyle = color.road;
+        ctx.beginPath();
+        ctx.moveTo(p1.x - p1.w, p1.y); ctx.lineTo(p1.x + p1.w, p1.y);
+        ctx.lineTo(p2.x + p2.w, p2.y); ctx.lineTo(p2.x - p2.w, p2.y);
+        ctx.fill();
+    },
+
+    drawPlayer() {
+        const ctx = this.ctx;
+        const w = 120, h = 80;
+        const x = this.width / 2 - w / 2;
+        const y = this.height - h - 50;
+
+        // Screen Shake on Nitro
+        const sx = this.isNitro ? (Math.random()-0.5)*10 : 0;
+        const sy = this.isNitro ? (Math.random()-0.5)*10 : 0;
+
+        ctx.save();
+        ctx.translate(sx, sy);
+        
+        // Glow effect
+        ctx.shadowBlur = 20;
+        ctx.shadowColor = '#00f2fe';
+        
+        ctx.fillStyle = '#111';
+        ctx.fillRect(x, y, w, h);
+        ctx.strokeStyle = '#00f2fe';
+        ctx.lineWidth = 4;
+        ctx.strokeRect(x, y, w, h);
+        
+        // Taillights
+        ctx.fillStyle = this.isNitro ? '#ff0055' : '#500';
+        ctx.fillRect(x + 10, y + h - 15, 20, 10);
+        ctx.fillRect(x + w - 30, y + h - 15, 20, 10);
+        
+        ctx.restore();
+    },
+
+    start() {
+        document.getElementById('menu').style.display = 'none';
+        this.isRunning = true;
     },
 
     loop() {
-        this.update();
+        this.update(1/this.fps);
         this.draw();
         requestAnimationFrame(() => this.loop());
     }
 };
 
-Game.init();
+Engine.init();
 </script>
 </body>
 </html>
+drawSprites() {
+        const baseSegment = this.findSegment(this.position);
+        for (let n = 0; n < this.drawDistance; n++) {
+            const segment = this.segments[(baseSegment.index + n) % this.segments.length];
+            
+            // Renderimi i makinave kundërshtare
+            this.cars.forEach(car => {
+                if (this.findSegment(car.pos) === segment) {
+                    const scale = segment.p1.screen.scale;
+                    const destX = segment.p1.screen.x + (scale * car.offset * this.roadWidth * this.width / 2);
+                    const destY = segment.p1.screen.y;
+                    this.drawEnemy(destX, destY, scale, car.color);
+                }
+            });
+
+            // Detektimi i përplasjeve (Collision Box)
+            if (segment === this.findSegment(this.position + this.playerZ)) {
+                this.cars.forEach(car => {
+                    if (this.findSegment(car.pos) === segment) {
+                        if (Math.abs(this.playerX - car.offset) < 0.3) {
+                            this.speed = 500; // Crash speed penalty
+                            this.nitro = Math.max(0, this.nitro - 20);
+                            Camera.shake = 30;
+                        }
+                    }
+                });
+            }
+        }
+    },
+
+    drawEnemy(x, y, scale, color) {
+        const w = 120 * scale, h = 80 * scale;
+        this.ctx.fillStyle = '#111';
+        this.ctx.fillRect(x - w/2, y - h, w, h);
+        this.ctx.strokeStyle = color;
+        this.ctx.lineWidth = 2;
+        this.ctx.strokeRect(x - w/2, y - h, w, h);
+    },
+
+    updatePhysics(dt) {
+        // Llogaritja e forcës centripetale në kthesa
+        const playerSegment = this.findSegment(this.position + this.playerZ);
+        const speedPercent = this.speed / this.maxSpeed;
+        
+        // Shkundja e timonit në shpejtësi të lartë
+        if (this.isNitro) {
+            this.playerX += (Math.random() - 0.5) * 0.01;
+            Camera.shake = 5;
+        }
+
+        // Dalja jashtë rruge (Off-road friction)
+        if ((this.playerX < -1) || (this.playerX > 1)) {
+            if (this.speed > 2000) this.speed += this.decel * 3;
+        }
+    },
+
+    // FUNKSIONI KRYESOR I RENDERIMIT (RENDER LOOP)
+    render() {
+        this.ctx.save();
+        const offset = Camera.getOffset();
+        this.ctx.translate(offset.x, offset.y);
+
+        // 1. Qielli dhe Mjedisi
+        this.drawBackground(this.ctx, this.width, this.height, this.position);
+
+        // 2. Rruga dhe Segmentet
+        this.draw(); 
+
+        // 3. Makinat dhe Objektet
+        this.drawSprites();
+
+        // 4. Efektet e Partikujve
+        if (this.isNitro) {
+            const pX = this.width / 2;
+            const pY = this.height - 100;
+            // Spawn nitro particles
+        }
+
+        this.ctx.restore();
+    },
+
+    drawBackground(ctx, w, h, pos) {
+        let g = ctx.createLinearGradient(0, 0, 0, h);
+        g.addColorStop(0, '#000022');
+        g.addColorStop(1, '#000');
+        ctx.fillStyle = g;
+        ctx.fillRect(0, 0, w, h);
+        
+        // Stars/Neon horizon
+        ctx.fillStyle = '#0ff';
+        for(let i=0; i<50; i++) {
+            let x = (Math.sin(i) * 5000 - pos/10) % w;
+            if (x < 0) x += w;
+            ctx.fillRect(x, (i*10) % (h/2), 2, 2);
+        }
+    }
+};
+
+// INITIALIZATION OVERRIDE
+Engine.loop = function() {
+    if (this.isRunning) {
+        const now = performance.now();
+        const dt = Math.min(1, (now - (this.lastTime || now)) / 1000);
+        this.lastTime = now;
+        
+        this.update(dt);
+        this.updatePhysics(dt);
+        Camera.update();
+        this.render();
+    }
+    requestAnimationFrame(() => this.loop());
+};
+
+Engine.init();
