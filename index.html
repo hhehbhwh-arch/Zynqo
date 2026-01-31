@@ -1,129 +1,162 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="sq">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>ZYNQO - Trending Products</title>
-  <style>
-    /* Basic Reset */
-    * { margin: 0; padding: 0; box-sizing: border-box; font-family: Arial, sans-serif; }
-    
-    body {
-      background: #0a0a0a;
-      color: #fff;
-      line-height: 1.6;
-      display: flex;
-      flex-direction: column;
-      min-height: 100vh;
-    }
+<meta charset="UTF-8">
+<title>Spider-Man: City Missions</title>
 
-    header {
-      text-align: center;
-      padding: 50px 20px 20px 20px;
-      background: linear-gradient(90deg, #1c1c1c, #121212);
-    }
+<style>
+body {
+  margin: 0;
+  background: #050505;
+  overflow: hidden;
+  font-family: Arial, sans-serif;
+}
 
-    header h1 {
-      font-size: 3rem;
-      color: #00bfff;
-      margin-bottom: 10px;
-    }
+#ui {
+  position: absolute;
+  top: 10px;
+  left: 10px;
+  color: white;
+  font-size: 18px;
+  z-index: 10;
+  text-shadow: 2px 2px 4px black;
+}
 
-    header p {
-      font-size: 1.2rem;
-      color: #aaa;
-    }
-
-    main {
-      flex: 1;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      padding: 40px 20px;
-      gap: 20px;
-    }
-
-    .product-card {
-      background: #1c1c1c;
-      padding: 20px;
-      border-radius: 15px;
-      text-align: center;
-      width: 90%;
-      max-width: 300px;
-      transition: transform 0.3s;
-    }
-
-    .product-card:hover {
-      transform: scale(1.05);
-    }
-
-    .product-card img {
-      width: 100%;
-      border-radius: 10px;
-      margin-bottom: 15px;
-    }
-
-    .product-card h2 {
-      font-size: 1.5rem;
-      color: #00bfff;
-      margin-bottom: 10px;
-    }
-
-    .product-card p {
-      font-size: 1rem;
-      color: #ccc;
-      margin-bottom: 15px;
-    }
-
-    .product-card a {
-      text-decoration: none;
-      background: #00bfff;
-      color: #fff;
-      padding: 10px 20px;
-      border-radius: 8px;
-      transition: background 0.3s;
-    }
-
-    .product-card a:hover {
-      background: #0095cc;
-    }
-
-    footer {
-      text-align: center;
-      padding: 20px;
-      background: #121212;
-      font-size: 0.9rem;
-      color: #555;
-    }
-  </style>
+canvas {
+  display: block;
+  margin: auto;
+}
+</style>
 </head>
 <body>
 
-  <header>
-    <h1>ZYNQO</h1>
-    <p>Trending products delivered fast 🚀</p>
-  </header>
+<div id="ui">
+  <div id="mission"></div>
+  <div id="hp"></div>
+</div>
 
-  <main>
-    <div class="product-card">
-      <img src=https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQe8ZQZtaY60iGifMw3_Pdt2wyInTMW_NTAztmGGdHZUw&s >
-      <h2>Kereher Profesional 1</h2>
-      <p>Get this trending product before it sells out!</p>
-      <a href="#">Buy Now</a>
-    </div>
+<canvas id="game" width="900" height="500"></canvas>
 
-    <div class="product-card">
-      <img src="https://via.placeholder.com/300x300.png?text=Product+2" alt="Product 2">
-      <h2>Hot Product 2</h2>
-      <p>Limited stock! Grab yours today.</p>
-      <a href="#">Buy Now</a>
-    </div>
-  </main>
+<script>
+const canvas = document.getElementById("game");
+const ctx = canvas.getContext("2d");
 
-  <footer>
-    &copy; 2026 ZYNQO. All rights reserved.
-  </footer>
+// PLAYER
+const player = {
+  x: 100,
+  y: 360,
+  w: 35,
+  h: 60,
+  speed: 5,
+  hp: 100
+};
+
+// ENEMY
+let enemy = {
+  x: 650,
+  y: 360,
+  w: 35,
+  h: 60,
+  alive: true
+};
+
+// MISSIONS
+const missions = [
+  { text: "Mision 1: Shko te pika 🟡", check: () => player.x > 420 },
+  { text: "Mision 2: Mund armikun (F)", check: () => !enemy.alive },
+  { text: "Mision 3: Kthehu në bazë", check: () => player.x < 120 }
+];
+let currentMission = 0;
+
+// CONTROLS
+const keys = {};
+addEventListener("keydown", e => keys[e.key] = true);
+addEventListener("keyup", e => keys[e.key] = false);
+
+// UPDATE
+function update() {
+  if (keys["ArrowRight"]) player.x += player.speed;
+  if (keys["ArrowLeft"]) player.x -= player.speed;
+
+  if (keys["f"] && enemy.alive && collide(player, enemy)) {
+    enemy.alive = false;
+  }
+
+  if (missions[currentMission] && missions[currentMission].check()) {
+    currentMission++;
+  }
+
+  document.getElementById("mission").innerText =
+    missions[currentMission]?.text || "🎉 Misionet u kryen!";
+  document.getElementById("hp").innerText = "❤️ " + player.hp;
+}
+
+// DRAW CITY
+function drawCity() {
+  let g = ctx.createLinearGradient(0,0,0,500);
+  g.addColorStop(0,"#1e3c72");
+  g.addColorStop(1,"#2a5298");
+  ctx.fillStyle = g;
+  ctx.fillRect(0,0,900,500);
+
+  ctx.fillStyle = "#111";
+  for (let i = 0; i < 10; i++) {
+    ctx.fillRect(i*100, 220 + Math.random()*30, 80, 300);
+  }
+
+  ctx.fillStyle = "#222";
+  ctx.fillRect(0, 420, 900, 80);
+}
+
+// DRAW SPIDERMAN
+function drawSpiderman(p) {
+  ctx.fillStyle = "red";
+  ctx.fillRect(p.x, p.y, p.w, p.h);
+
+  ctx.fillStyle = "white";
+  ctx.fillRect(p.x + 6, p.y + 12, 8, 8);
+  ctx.fillRect(p.x + 21, p.y + 12, 8, 8);
+}
+
+// DRAW ENEMY
+function drawEnemy(e) {
+  ctx.fillStyle = "#000";
+  ctx.fillRect(e.x, e.y, e.w, e.h);
+
+  ctx.fillStyle = "red";
+  ctx.fillRect(e.x + 10, e.y + 15, 5, 5);
+  ctx.fillRect(e.x + 20, e.y + 15, 5, 5);
+}
+
+// DRAW
+function draw() {
+  ctx.clearRect(0,0,900,500);
+  drawCity();
+  drawSpiderman(player);
+  if (enemy.alive) drawEnemy(enemy);
+
+  ctx.fillStyle = "yellow";
+  ctx.beginPath();
+  ctx.arc(450, 420, 10, 0, Math.PI*2);
+  ctx.fill();
+}
+
+// COLLISION
+function collide(a,b) {
+  return a.x < b.x+b.w &&
+         a.x+a.w > b.x &&
+         a.y < b.y+b.h &&
+         a.y+a.h > b.y;
+}
+
+// LOOP
+function loop() {
+  update();
+  draw();
+  requestAnimationFrame(loop);
+}
+loop();
+</script>
 
 </body>
 </html>
