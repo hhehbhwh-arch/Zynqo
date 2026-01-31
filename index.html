@@ -3,7 +3,6 @@
 <head>
 <meta charset="UTF-8">
 <title>Spider-Man: City Missions</title>
-
 <style>
 body {
   margin: 0;
@@ -25,6 +24,7 @@ body {
 canvas {
   display: block;
   margin: auto;
+  background: linear-gradient(#1e3c72, #2a5298);
 }
 </style>
 </head>
@@ -33,126 +33,109 @@ canvas {
 <div id="ui">
   <div id="mission"></div>
   <div id="hp"></div>
+  <div id="score"></div>
 </div>
 
 <canvas id="game" width="900" height="500"></canvas>
 
 <script>
-const canvas = document.getElementById("game");
-const ctx = canvas.getContext("2d");
+// --------- PLAYER ---------
+const player = { x:100, y:360, w:35, h:60, speed:5, hp:100, score:0 };
 
-// PLAYER
-const player = {
-  x: 100,
-  y: 360,
-  w: 35,
-  h: 60,
-  speed: 5,
-  hp: 100
-};
+// --------- ENEMIES ---------
+const enemies = [
+  { x:650, y:360, w:35, h:60, alive:true },
+  { x:750, y:360, w:35, h:60, alive:true }
+];
 
-// ENEMY
-let enemy = {
-  x: 650,
-  y: 360,
-  w: 35,
-  h: 60,
-  alive: true
-};
-
-// MISSIONS
+// --------- MISSIONS ---------
 const missions = [
-  { text: "Mision 1: Shko te pika 🟡", check: () => player.x > 420 },
-  { text: "Mision 2: Mund armikun (F)", check: () => !enemy.alive },
-  { text: "Mision 3: Kthehu në bazë", check: () => player.x < 120 }
+  { text:"Shko te pika 🟡", completed:false, check:p=>p.x>420 },
+  { text:"Mund armikun (F)", completed:false, check:(p,e)=>e.every(x=>!x.alive) },
+  { text:"Kthehu në bazë", completed:false, check:p=>p.x<120 }
 ];
 let currentMission = 0;
 
-// CONTROLS
+// --------- CANVAS ---------
+const canvas = document.getElementById("game");
+const ctx = canvas.getContext("2d");
 const keys = {};
-addEventListener("keydown", e => keys[e.key] = true);
-addEventListener("keyup", e => keys[e.key] = false);
+addEventListener("keydown", e=>keys[e.key]=true);
+addEventListener("keyup", e=>keys[e.key]=false);
 
-// UPDATE
-function update() {
-  if (keys["ArrowRight"]) player.x += player.speed;
-  if (keys["ArrowLeft"]) player.x -= player.speed;
+// --------- FUNCTIONS ---------
+function updatePlayer() {
+  if(keys["ArrowRight"]) player.x+=player.speed;
+  if(keys["ArrowLeft"]) player.x-=player.speed;
+}
+function drawPlayer() {
+  ctx.fillStyle="red";
+  ctx.fillRect(player.x, player.y, player.w, player.h);
+  ctx.fillStyle="white";
+  ctx.fillRect(player.x+6,player.y+12,8,8);
+  ctx.fillRect(player.x+21,player.y+12,8,8);
+}
 
-  if (keys["f"] && enemy.alive && collide(player, enemy)) {
-    enemy.alive = false;
-  }
+function updateEnemies() {
+  enemies.forEach(e=>{
+    if(e.alive && keys["f"] && collide(player,e)) e.alive=false;
+  });
+}
 
-  if (missions[currentMission] && missions[currentMission].check()) {
+function drawEnemies() {
+  enemies.forEach(e=>{
+    if(!e.alive) return;
+    ctx.fillStyle="#000"; ctx.fillRect(e.x,e.y,e.w,e.h);
+    ctx.fillStyle="red";
+    ctx.fillRect(e.x+10,e.y+15,5,5);
+    ctx.fillRect(e.x+20,e.y+15,5,5);
+  });
+}
+
+function updateMissions() {
+  if(missions[currentMission] && missions[currentMission].check(player,enemies)) {
+    missions[currentMission].completed=true;
     currentMission++;
   }
-
-  document.getElementById("mission").innerText =
-    missions[currentMission]?.text || "🎉 Misionet u kryen!";
-  document.getElementById("hp").innerText = "❤️ " + player.hp;
 }
 
-// DRAW CITY
+function updateUI() {
+  document.getElementById("mission").innerText=missions.find(m=>!m.completed)?.text || "🎉 Misionet u kryen!";
+  document.getElementById("hp").innerText="❤️ "+player.hp;
+  document.getElementById("score").innerText="⭐ "+player.score;
+}
+
 function drawCity() {
   let g = ctx.createLinearGradient(0,0,0,500);
-  g.addColorStop(0,"#1e3c72");
-  g.addColorStop(1,"#2a5298");
-  ctx.fillStyle = g;
-  ctx.fillRect(0,0,900,500);
-
-  ctx.fillStyle = "#111";
-  for (let i = 0; i < 10; i++) {
-    ctx.fillRect(i*100, 220 + Math.random()*30, 80, 300);
-  }
-
-  ctx.fillStyle = "#222";
-  ctx.fillRect(0, 420, 900, 80);
+  g.addColorStop(0,"#1e3c72"); g.addColorStop(1,"#2a5298");
+  ctx.fillStyle=g; ctx.fillRect(0,0,900,500);
+  ctx.fillStyle="#111";
+  for(let i=0;i<10;i++) ctx.fillRect(i*100,220+Math.random()*30,80,300);
+  ctx.fillStyle="#222"; ctx.fillRect(0,420,900,80);
 }
 
-// DRAW SPIDERMAN
-function drawSpiderman(p) {
-  ctx.fillStyle = "red";
-  ctx.fillRect(p.x, p.y, p.w, p.h);
-
-  ctx.fillStyle = "white";
-  ctx.fillRect(p.x + 6, p.y + 12, 8, 8);
-  ctx.fillRect(p.x + 21, p.y + 12, 8, 8);
+function collide(a,b){
+  return a.x < b.x+b.w && a.x+a.w > b.x && a.y < b.y+b.h && a.y+a.h > b.y;
 }
 
-// DRAW ENEMY
-function drawEnemy(e) {
-  ctx.fillStyle = "#000";
-  ctx.fillRect(e.x, e.y, e.w, e.h);
-
-  ctx.fillStyle = "red";
-  ctx.fillRect(e.x + 10, e.y + 15, 5, 5);
-  ctx.fillRect(e.x + 20, e.y + 15, 5, 5);
+// --------- GAME LOOP ---------
+function update(){
+  updatePlayer();
+  updateEnemies();
+  updateMissions();
+  updateUI();
 }
-
-// DRAW
-function draw() {
+function draw(){
   ctx.clearRect(0,0,900,500);
   drawCity();
-  drawSpiderman(player);
-  if (enemy.alive) drawEnemy(enemy);
-
-  ctx.fillStyle = "yellow";
-  ctx.beginPath();
-  ctx.arc(450, 420, 10, 0, Math.PI*2);
-  ctx.fill();
+  drawPlayer();
+  drawEnemies();
+  ctx.fillStyle="yellow"; ctx.beginPath();
+  ctx.arc(450,420,10,0,Math.PI*2); ctx.fill();
 }
 
-// COLLISION
-function collide(a,b) {
-  return a.x < b.x+b.w &&
-         a.x+a.w > b.x &&
-         a.y < b.y+b.h &&
-         a.y+a.h > b.y;
-}
-
-// LOOP
-function loop() {
-  update();
-  draw();
+function loop(){
+  update(); draw();
   requestAnimationFrame(loop);
 }
 loop();
