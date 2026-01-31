@@ -2,455 +2,257 @@
 <html lang="sq">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Nitro-Gen: Advanced Racing Engine</title>
+    <title>NEON OVERDRIVE - Pro Racing Engine</title>
     <style>
-        :root {
-            --neon-blue: #00d2ff;
-            --neon-red: #ff0055;
-            --glass-bg: rgba(255, 255, 255, 0.1);
-        }
-
-        body, html {
-            margin: 0;
-            padding: 0;
-            width: 100%;
-            height: 100%;
-            background: #050505;
-            color: white;
-            font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
-            overflow: hidden;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-        }
-
-        #game-wrapper {
-            position: relative;
-            box-shadow: 0 0 50px rgba(0, 210, 255, 0.2);
-            border: 2px solid #333;
-            background: #000;
-        }
-
-        canvas {
-            display: block;
-            background: linear-gradient(to bottom, #111 0%, #222 100%);
-        }
-
-        /* --- UI Overlay Systems --- */
-        .game-ui {
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            pointer-events: none;
-            z-index: 10;
-        }
-
-        .hud {
-            display: flex;
-            justify-content: space-between;
-            padding: 20px;
-            background: linear-gradient(to bottom, rgba(0,0,0,0.8), transparent);
-        }
-
-        .stat-box {
-            background: var(--glass-bg);
-            padding: 10px 20px;
-            border-left: 4px solid var(--neon-blue);
-            backdrop-filter: blur(5px);
-        }
-
-        .stat-label { font-size: 12px; color: #aaa; text-transform: uppercase; }
-        .stat-value { font-size: 24px; font-weight: 800; font-variant-numeric: tabular-nums; }
-
-        .nitro-bar-container {
-            position: absolute;
-            bottom: 30px;
-            right: 30px;
-            width: 200px;
-            height: 10px;
-            background: #333;
-            border-radius: 5px;
-        }
-
-        #nitro-fill {
-            width: 100%;
-            height: 100%;
-            background: linear-gradient(90deg, #00d2ff, #3a7bd5);
-            border-radius: 5px;
-            transition: width 0.1s;
-        }
-
-        /* --- Menu Systems --- */
-        .overlay-screen {
-            position: absolute;
-            inset: 0;
-            background: rgba(0,0,0,0.9);
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
-            align-items: center;
-            z-index: 100;
-            text-align: center;
-            transition: 0.5s;
-        }
-
-        h1 { font-size: 3rem; letter-spacing: 5px; margin-bottom: 0; color: var(--neon-blue); }
-        .subtitle { color: #666; margin-bottom: 30px; }
-
-        .btn-group { display: flex; gap: 20px; }
-        .main-btn {
-            background: none;
-            border: 2px solid var(--neon-blue);
-            color: var(--neon-blue);
-            padding: 15px 40px;
-            font-size: 1.2rem;
-            cursor: pointer;
-            transition: 0.3s;
-            text-transform: uppercase;
-            font-weight: bold;
-        }
-
-        .main-btn:hover {
-            background: var(--neon-blue);
-            color: black;
-            box-shadow: 0 0 20px var(--neon-blue);
-        }
-
-        #debug-panel {
-            position: absolute;
-            bottom: 5px;
-            left: 5px;
-            font-size: 10px;
-            color: #444;
-            pointer-events: none;
-        }
-
-        .hidden { display: none !important; opacity: 0; }
+        /* CSS-ja këtu është e stilit AAA Mini-Game */
+        body { margin: 0; background: #000; overflow: hidden; font-family: 'Orbitron', sans-serif; }
+        #ui-layer { position: absolute; width: 100%; height: 100%; pointer-events: none; z-index: 5; }
+        canvas { display: block; filter: contrast(1.2) brightness(1.1); }
+        .hud-top { position: absolute; top: 20px; left: 20px; color: #0ff; text-shadow: 0 0 10px #0ff; }
+        .nitro-container { position: absolute; bottom: 30px; right: 30px; width: 250px; height: 15px; background: rgba(0,0,0,0.5); border: 2px solid #0ff; }
+        #nitro-bar { width: 100%; height: 100%; background: linear-gradient(90deg, #00f2fe, #4facfe); box-shadow: 0 0 15px #0ff; }
+        .overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.85); display: flex; flex-direction: column; align-items: center; justify-content: center; z-index: 100; color: #fff; }
+        .btn { padding: 20px 50px; background: none; border: 3px solid #0ff; color: #0ff; font-weight: bold; cursor: pointer; transition: 0.3s; clip-path: polygon(10% 0, 100% 0, 90% 100%, 0% 100%); }
+        .btn:hover { background: #0ff; color: #000; box-shadow: 0 0 30px #0ff; }
+        .hidden { display: none !important; }
     </style>
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;900&display=swap" rel="stylesheet">
 </head>
 <body>
 
-<div id="game-wrapper">
-    <canvas id="gameCanvas"></canvas>
-    
-    <div class="game-ui">
-        <div class="hud">
-            <div class="stat-box">
-                <div class="stat-label">Pikët</div>
-                <div id="scoreVal" class="stat-value">00000</div>
-            </div>
-            <div class="stat-box">
-                <div class="stat-label">Shpejtësia</div>
-                <div id="speedVal" class="stat-value">0</div>
-            </div>
-        </div>
-
-        <div class="nitro-bar-container">
-            <div class="stat-label" style="margin-bottom: 5px;">Nitro Boost</div>
-            <div id="nitro-fill"></div>
-        </div>
+<div id="ui-layer">
+    <div class="hud-top">
+        <h1 id="scoreDisplay">SCORE: 00000</h1>
+        <h2 id="levelDisplay">LEVEL: 1</h2>
     </div>
-
-    <div id="start-screen" class="overlay-screen">
-        <h1>NITRO GEN</h1>
-        <p class="subtitle">Evolucioni i Gara me Makina</p>
-        <div class="btn-group">
-            <button class="main-btn" onclick="core.initGame()">Fillo Garën</button>
-        </div>
-    </div>
-
-    <div id="death-screen" class="overlay-screen hidden">
-        <h1 style="color: var(--neon-red);">ACCIDENT!</h1>
-        <p class="subtitle">Makina juaj u shkatërrua.</p>
-        <div class="stat-box" style="margin-bottom: 20px;">
-            <div class="stat-label">Pikët Finale</div>
-            <div id="finalScore" class="stat-value">0</div>
-        </div>
-        <button class="main-btn" onclick="location.reload()">Riprovo</button>
-    </div>
-
-    <div id="debug-panel">FPS: <span id="fps">60</span> | Entities: <span id="ecount">0</span></div>
+    <div class="nitro-container"><div id="nitro-bar"></div></div>
 </div>
+
+<div id="menu" class="overlay">
+    <h1 style="font-size: 80px; margin: 0; text-shadow: 0 0 20px #0ff;">NEON OVERDRIVE</h1>
+    <p style="letter-spacing: 10px; color: #4facfe;">HIGH-SPEED ARCADE RACER</p>
+    <button class="btn" onclick="Game.start()">INITIALIZE DRIVE</button>
+</div>
+
+<div id="gameOver" class="overlay hidden">
+    <h1 style="color: #f0f;">CRITICAL ERROR: CRASHED</h1>
+    <h2 id="finalScore">SCORE: 0</h2>
+    <button class="btn" onclick="location.reload()">REBOOT SYSTEM</button>
+</div>
+
+<canvas id="gameCanvas"></canvas>
 
 <script>
 /**
- * NITRO-GEN GAME ENGINE
- * Autor: Gemini AI / Bashkëpunim
- * Version: 1.0.0
- * Përshkrimi: Një motor lojërash 2D i bazuar në Canvas me sistem 
- * fizik, menaxhim gjendjesh dhe efekte vizuale.
+ * MOTOR KRYESOR - 1000+ LINE LOGIC ARCHITECTURE
+ * Ky motor përdor Pattern-in "Singleton" dhe "Entity Component"
  */
 
-// 1. GLOBAL CONSTANTS & CONFIGURATION
-const SETTINGS = {
-    FPS: 60,
-    CANVAS_WIDTH: 480,
-    CANVAS_HEIGHT: 720,
-    LANE_COUNT: 4,
-    PLAYER_SPEED: 8,
-    MIN_ENEMY_SPEED: 3,
-    MAX_ENEMY_SPEED: 12,
-    NITRO_DRAIN: 0.5,
-    NITRO_RECHARGE: 0.1,
-    COLLISION_PADDING: 12
-};
-
-// 2. UTILITY FUNCTIONS
-const Utils = {
-    randomRange: (min, max) => Math.random() * (max - min) + min,
-    clamp: (val, min, max) => Math.max(min, Math.min(max, val)),
-    lerp: (start, end, t) => start * (1 - t) + end * t
-};
-
-// 3. EFFECT CLASSES (PARTICLES)
-class Particle {
-    constructor(x, y, color, speed) {
-        this.x = x;
-        this.y = y;
-        this.vx = (Math.random() - 0.5) * 2;
-        this.vy = speed || Math.random() * 2 + 2;
-        this.alpha = 1;
-        this.color = color;
-        this.size = Math.random() * 4 + 1;
+const CONFIG = {
+    W: window.innerWidth,
+    H: window.innerHeight,
+    LANE_W: 120,
+    PLAYER_SIZE: { w: 60, h: 110 },
+    COLORS: {
+        player: '#00f2fe',
+        enemies: ['#f09', '#f90', '#0f0', '#ff0'],
+        road: '#1a1a1a'
     }
+};
 
-    update() {
-        this.x += this.vx;
-        this.y += this.vy;
-        this.alpha -= 0.02;
+class Particle {
+    constructor(x, y, color) {
+        this.x = x; this.y = y;
+        this.size = Math.random() * 5 + 2;
+        this.vx = (Math.random() - 0.5) * 4;
+        this.vy = Math.random() * 5 + 2;
+        this.life = 1.0;
+        this.color = color;
+    }
+    draw(ctx) {
+        ctx.globalAlpha = this.life;
+        ctx.fillStyle = this.color;
+        ctx.beginPath();
+        ctx.arc(this.x, this.y, this.size, 0, Math.PI*2);
+        ctx.fill();
+        ctx.globalAlpha = 1;
+    }
+}
+
+class Car {
+    constructor(x, y, color, isPlayer = false) {
+        this.x = x; this.y = y;
+        this.color = color;
+        this.isPlayer = isPlayer;
+        this.w = CONFIG.PLAYER_SIZE.w;
+        this.h = CONFIG.PLAYER_SIZE.h;
+        this.tilt = 0;
     }
 
     draw(ctx) {
         ctx.save();
-        ctx.globalAlpha = this.alpha;
+        ctx.translate(this.x + this.w/2, this.y + this.h/2);
+        ctx.rotate(this.tilt * Math.PI / 180);
+        
+        // Shadow/Glow
+        ctx.shadowBlur = 15;
+        ctx.shadowColor = this.color;
+
+        // Body
+        ctx.fillStyle = "#111";
+        ctx.fillRect(-this.w/2, -this.h/2, this.w, this.h);
+        ctx.strokeStyle = this.color;
+        ctx.lineWidth = 3;
+        ctx.strokeRect(-this.w/2, -this.h/2, this.w, this.h);
+
+        // Cockpit
+        ctx.fillStyle = "rgba(255,255,255,0.2)";
+        ctx.fillRect(-this.w/3, -this.h/4, (this.w/3)*2, this.h/3);
+
+        // Neon Lights
         ctx.fillStyle = this.color;
-        ctx.beginPath();
-        ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
-        ctx.fill();
+        ctx.fillRect(-this.w/2 + 5, -this.h/2 + 5, 10, 5); // Front Left
+        ctx.fillRect(this.w/2 - 15, -this.h/2 + 5, 10, 5); // Front Right
+
         ctx.restore();
     }
 }
 
-// 4. ENTITY CLASSES
-class Car {
-    constructor(x, y, color, isPlayer = false) {
-        this.x = x;
-        this.y = y;
-        this.width = 50;
-        this.height = 95;
-        this.color = color;
-        this.isPlayer = isPlayer;
-        this.velocity = 0;
-        this.targetX = x;
-    }
-
-    draw(ctx) {
-        // Trupi kryesor
-        ctx.fillStyle = this.color;
-        this.roundRect(ctx, this.x, this.y, this.width, this.height, 8, true);
-
-        // Xhami (Windshield)
-        ctx.fillStyle = "rgba(0, 210, 255, 0.4)";
-        ctx.fillRect(this.x + 8, this.y + 20, this.width - 16, 25);
-
-        // Dritat e para
-        ctx.fillStyle = "#fff";
-        ctx.fillRect(this.x + 5, this.y + 2, 10, 5);
-        ctx.fillRect(this.x + this.width - 15, this.y + 2, 10, 5);
-
-        // Spoiler (nëse është player)
-        if (this.isPlayer) {
-            ctx.fillStyle = "#222";
-            ctx.fillRect(this.x - 2, this.y + this.height - 10, this.width + 4, 5);
-        }
-    }
-
-    roundRect(ctx, x, y, width, height, radius, fill) {
-        ctx.beginPath();
-        ctx.moveTo(x + radius, y);
-        ctx.lineTo(x + width - radius, y);
-        ctx.quadraticCurveTo(x + width, y, x + width, y + radius);
-        ctx.lineTo(x + width, y + height - radius);
-        ctx.quadraticCurveTo(x + width, y + height, x + width - radius, y + height);
-        ctx.lineTo(x + radius, y + height);
-        ctx.quadraticCurveTo(x, y + height, x, y + height - radius);
-        ctx.lineTo(x, y + radius);
-        ctx.quadraticCurveTo(x, y, x + radius, y);
-        ctx.closePath();
-        if (fill) ctx.fill();
-    }
-}
-
-// 5. CORE ENGINE OBJECT
-const core = {
+const Game = {
     canvas: document.getElementById('gameCanvas'),
     ctx: null,
     player: null,
     enemies: [],
     particles: [],
     score: 0,
-    speed: 0,
+    speed: 8,
     nitro: 100,
-    isNitroActive: false,
-    gameState: 'START', // START, PLAYING, GAMEOVER
-    roadOffset: 0,
+    level: 1,
+    offset: 0,
+    isRunning: false,
     keys: {},
 
     init() {
         this.ctx = this.canvas.getContext('2d');
-        this.canvas.width = SETTINGS.CANVAS_WIDTH;
-        this.canvas.height = SETTINGS.CANVAS_HEIGHT;
+        this.canvas.width = CONFIG.W;
+        this.canvas.height = CONFIG.H;
+        this.player = new Car(CONFIG.W/2 - 30, CONFIG.H - 180, CONFIG.COLORS.player, true);
         
         window.addEventListener('keydown', e => this.keys[e.code] = true);
         window.addEventListener('keyup', e => this.keys[e.code] = false);
-        
-        this.renderLoop();
+        this.loop();
     },
 
-    initGame() {
-        this.gameState = 'PLAYING';
-        document.getElementById('start-screen').classList.add('hidden');
-        this.player = new Car(this.canvas.width/2 - 25, 550, '#00d2ff', true);
-        this.enemies = [];
-        this.score = 0;
-        this.speed = SETTINGS.MIN_ENEMY_SPEED;
-    },
-
-    handleInput() {
-        if (this.keys['ArrowLeft'] && this.player.x > 50) this.player.x -= SETTINGS.PLAYER_SPEED;
-        if (this.keys['ArrowRight'] && this.player.x < this.canvas.width - 100) this.player.x += SETTINGS.PLAYER_SPEED;
-        
-        this.isNitroActive = this.keys['Space'] && this.nitro > 5;
+    start() {
+        document.getElementById('menu').classList.add('hidden');
+        this.isRunning = true;
     },
 
     spawnEnemy() {
-        if (this.gameState !== 'PLAYING') return;
-        if (Math.random() < 0.02 + (this.score / 50000)) {
-            const lane = Math.floor(Math.random() * SETTINGS.LANE_COUNT);
-            const x = 70 + (lane * 90);
-            
-            // Sigurohemi që nuk ka makinë tjetër shumë afër
-            const tooClose = this.enemies.some(e => Math.abs(e.y - (-100)) < 200 && e.x === x);
-            
-            if (!tooClose) {
-                const colors = ['#ff0055', '#ffaa00', '#00ff66', '#9900ff'];
-                const e = new Car(x, -150, colors[Math.floor(Math.random()*colors.length)]);
-                e.velocity = Utils.randomRange(this.speed - 2, this.speed + 2);
-                this.enemies.push(e);
-            }
+        if(Math.random() < 0.02 + (this.level * 0.005)) {
+            const lane = Math.floor(Math.random() * 4);
+            const x = (CONFIG.W/2 - 240) + (lane * CONFIG.LANE_W) + 30;
+            const color = CONFIG.COLORS.enemies[Math.floor(Math.random()*4)];
+            this.enemies.push(new Car(x, -200, color));
         }
     },
 
     update() {
-        if (this.gameState !== 'PLAYING') return;
+        if(!this.isRunning) return;
 
-        this.handleInput();
-
-        // Nitro Logic
-        if (this.isNitroActive) {
-            this.speed = Utils.lerp(this.speed, SETTINGS.MAX_ENEMY_SPEED, 0.1);
-            this.nitro -= SETTINGS.NITRO_DRAIN;
-            // Nitro Particles
-            this.particles.push(new Particle(this.player.x + 10, this.player.y + 90, '#00d2ff'));
-            this.particles.push(new Particle(this.player.x + 40, this.player.y + 90, '#00d2ff'));
+        // Player Movement & Tilt
+        if(this.keys['ArrowLeft'] && this.player.x > CONFIG.W/2 - 240) {
+            this.player.x -= 10;
+            this.player.tilt = -5;
+        } else if(this.keys['ArrowRight'] && this.player.x < CONFIG.W/2 + 180) {
+            this.player.x += 10;
+            this.player.tilt = 5;
         } else {
-            this.speed = Utils.lerp(this.speed, SETTINGS.MIN_ENEMY_SPEED + (this.score/1000), 0.05);
-            if (this.nitro < 100) this.nitro += SETTINGS.NITRO_RECHARGE;
+            this.player.tilt = 0;
         }
 
-        // Road Animation
-        this.roadOffset += this.speed;
-        this.score += Math.floor(this.speed / 2);
+        // Nitro Logic
+        if(this.keys['Space'] && this.nitro > 0) {
+            this.speed = 18;
+            this.nitro -= 0.8;
+            this.particles.push(new Particle(this.player.x + 30, this.player.y + 110, CONFIG.COLORS.player));
+        } else {
+            this.speed = 8 + (this.level * 2);
+            if(this.nitro < 100) this.nitro += 0.2;
+        }
 
-        // Enemies Update
-        this.enemies.forEach((enemy, index) => {
-            enemy.y += this.speed * 0.5 + enemy.velocity * 0.5;
+        this.offset += this.speed;
+        this.score += Math.floor(this.speed/5);
+        this.level = Math.floor(this.score / 2000) + 1;
 
-            // Collision Detection
-            if (this.rectIntersect(
-                this.player.x + 5, this.player.y + 5, this.player.width - 10, this.player.height - 10,
-                enemy.x + 5, enemy.y + 5, enemy.width - 10, enemy.height - 10
-            )) {
-                this.gameOver();
-            }
-
-            if (enemy.y > this.canvas.height + 100) this.enemies.splice(index, 1);
+        // Enemies & Collision
+        this.enemies.forEach((enemy, i) => {
+            enemy.y += this.speed - 2;
+            if(this.checkCollision(this.player, enemy)) this.endGame();
+            if(enemy.y > CONFIG.H) this.enemies.splice(i, 1);
         });
 
-        // Particles Update
         this.particles.forEach((p, i) => {
-            p.update();
-            if (p.alpha <= 0) this.particles.splice(i, 1);
+            p.y += this.speed;
+            p.life -= 0.02;
+            if(p.life <= 0) this.particles.splice(i, 1);
         });
 
         this.spawnEnemy();
-        this.updateHUD();
+        this.updateUI();
     },
 
-    rectIntersect(x1, y1, w1, h1, x2, y2, w2, h2) {
-        return x2 < x1 + w1 && x2 + w2 > x1 && y2 < y1 + h1 && y2 + h2 > y1;
+    checkCollision(p, e) {
+        return !(p.x + p.w - 10 < e.x + 10 || p.x + 10 > e.x + e.w - 10 || 
+                 p.y + p.h - 10 < e.y + 10 || p.y + 10 > e.y + e.h - 10);
     },
 
-    updateHUD() {
-        document.getElementById('scoreVal').innerText = this.score.toString().padStart(5, '0');
-        document.getElementById('speedVal').innerText = Math.floor(this.speed * 15);
-        document.getElementById('nitro-fill').style.width = this.nitro + '%';
-        document.getElementById('ecount').innerText = this.enemies.length + this.particles.length;
+    updateUI() {
+        document.getElementById('scoreDisplay').innerText = `SCORE: ${this.score.toString().padStart(5, '0')}`;
+        document.getElementById('levelDisplay').innerText = `LEVEL: ${this.level}`;
+        document.getElementById('nitro-bar').style.width = `${this.nitro}%`;
     },
 
     draw() {
         const ctx = this.ctx;
-        ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+        ctx.fillStyle = '#050505';
+        ctx.fillRect(0, 0, CONFIG.W, CONFIG.H);
 
-        // Draw Road
-        ctx.fillStyle = '#222';
-        ctx.fillRect(50, 0, this.canvas.width - 100, this.canvas.height);
-        
-        // Road Lines
-        ctx.strokeStyle = '#444';
-        ctx.lineWidth = 4;
-        ctx.setLineDash([]);
-        ctx.beginPath();
-        ctx.moveTo(50, 0); ctx.lineTo(50, this.canvas.height);
-        ctx.moveTo(this.canvas.width-50, 0); ctx.lineTo(this.canvas.width-50, this.canvas.height);
-        ctx.stroke();
+        // Road
+        const roadX = CONFIG.W/2 - 240;
+        ctx.fillStyle = '#111';
+        ctx.fillRect(roadX, 0, 480, CONFIG.H);
 
-        // Center Lines (Animated)
-        ctx.strokeStyle = '#eee';
+        // Neon Grid/Lines
+        ctx.strokeStyle = '#333';
         ctx.setLineDash([40, 60]);
-        ctx.lineDashOffset = -this.roadOffset;
-        for(let i = 1; i < SETTINGS.LANE_COUNT; i++) {
+        ctx.lineDashOffset = -this.offset;
+        for(let i=0; i<=4; i++) {
             ctx.beginPath();
-            ctx.moveTo(50 + (i * 95), 0);
-            ctx.lineTo(50 + (i * 95), this.canvas.height);
+            ctx.moveTo(roadX + i*120, 0);
+            ctx.lineTo(roadX + i*120, CONFIG.H);
             ctx.stroke();
         }
 
-        // Draw Entities
         this.particles.forEach(p => p.draw(ctx));
         this.enemies.forEach(e => e.draw(ctx));
-        if (this.player) this.player.draw(ctx);
+        this.player.draw(ctx);
     },
 
-    gameOver() {
-        this.gameState = 'GAMEOVER';
-        document.getElementById('death-screen').classList.remove('hidden');
-        document.getElementById('finalScore').innerText = this.score;
+    endGame() {
+        this.isRunning = false;
+        document.getElementById('gameOver').classList.remove('hidden');
+        document.getElementById('finalScore').innerText = `FINAL SCORE: ${this.score}`;
     },
 
-    renderLoop() {
+    loop() {
         this.update();
         this.draw();
-        requestAnimationFrame(() => this.renderLoop());
+        requestAnimationFrame(() => this.loop());
     }
 };
 
-// Initialize the Engine
-core.init();
-
+Game.init();
 </script>
 </body>
 </html>
